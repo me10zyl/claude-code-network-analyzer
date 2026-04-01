@@ -1,0 +1,7 @@
+# .gitignore
+node_modules
+.next
+coverage
+/dist
+.vitest
+.env*
