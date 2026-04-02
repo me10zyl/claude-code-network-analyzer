@@ -266,6 +266,63 @@ describe('parseHarText and extractClaudeEntries', () => {
     expect(entries[0].body?.messages).toHaveLength(1)
   })
 
+  it('extracts loopback HTTP proxy endpoints that forward /v1/messages requests', () => {
+    const requestBodyText = JSON.stringify({
+      model: 'gpt-5.4(medium)',
+      messages: [
+        {
+          role: 'user',
+          content: [{ type: 'text', text: 'local proxy' }],
+        },
+      ],
+    })
+
+    const har = parseHarText(
+      JSON.stringify({
+        log: {
+          version: '1.2',
+          creator: { name: 'test', version: '1.0.0' },
+          entries: [
+            {
+              startedDateTime: '2026-04-01T10:00:04.500Z',
+              time: 31,
+              request: {
+                method: 'POST',
+                url: 'http://127.0.0.1:8317/v1/messages?beta=true',
+                headers: [],
+                postData: {
+                  mimeType: 'application/json',
+                  text: requestBodyText,
+                },
+              },
+              response: {
+                status: 200,
+                statusText: 'OK',
+                headers: [{ name: 'content-type', value: 'text/event-stream' }],
+                content: {
+                  size: 0,
+                  mimeType: 'text/event-stream',
+                  text: 'event: message_start\ndata: {"type":"message_start"}',
+                },
+              },
+            },
+          ],
+        },
+      }),
+    )
+
+    const entries = extractClaudeEntries(har)
+
+    expect(entries).toHaveLength(1)
+    expect(entries[0]).toMatchObject({
+      index: 1,
+      host: '127.0.0.1:8317',
+      pathname: '/v1/messages',
+      rawRequestText: requestBodyText,
+    })
+    expect(entries[0].body?.messages).toHaveLength(1)
+  })
+
   it('skips entries whose startedDateTime is invalid', () => {
     const har = parseHarText(
       JSON.stringify({

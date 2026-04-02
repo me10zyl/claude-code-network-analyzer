@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import { describe, expect, it } from 'vitest'
 
 import { NetworkTable } from '@/components/network/network-table'
 import type { ClassifiedRequest, RequestDiffSummary } from '@/lib/models/semantic'
@@ -53,6 +54,21 @@ function createClassification(): ClassifiedRequest {
   }
 }
 
+function createClassificationWithDuplicateToolNames(): ClassifiedRequest {
+  return {
+    requestId: 'req-1',
+    stepType: 'tool_call',
+    confidence: 0.99,
+    reasons: ['assistant emitted tool_use content'],
+    toolCalls: [
+      { id: 'toolu_1', name: 'Agent' },
+      { id: 'toolu_2', name: 'Agent' },
+    ],
+    hasToolResult: false,
+    hasThinking: false,
+  }
+}
+
 function createDiff(): RequestDiffSummary {
   return {
     changed: true,
@@ -88,7 +104,7 @@ describe('NetworkTable', () => {
     const request = createRequest()
     const unrelatedClassification: ClassifiedRequest = {
       requestId: 'req-2',
-      stepType: 'assistant_response',
+      stepType: 'final_answer',
       confidence: 0.8,
       reasons: ['different request'],
       toolCalls: [],
@@ -108,6 +124,20 @@ describe('NetworkTable', () => {
 
     expect(screen.getByText('tool_call')).toBeInTheDocument()
     expect(screen.getByText('WebSearch')).toBeInTheDocument()
-    expect(screen.queryByText('assistant_response')).not.toBeInTheDocument()
+    expect(screen.queryByText('final_answer')).not.toBeInTheDocument()
+  })
+
+  it('deduplicates repeated tool badges for the same request', () => {
+    render(
+      <NetworkTable
+        requests={[createRequest()]}
+        classified={[createClassificationWithDuplicateToolNames()]}
+        diffs={[{ requestId: 'req-1', summary: createDiff() }]}
+        selectedRequestId={null}
+        onSelectRequest={() => {}}
+      />,
+    )
+
+    expect(screen.getAllByText('Agent')).toHaveLength(1)
   })
 })

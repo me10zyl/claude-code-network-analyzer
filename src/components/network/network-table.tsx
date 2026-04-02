@@ -40,7 +40,7 @@ export function NetworkTable({
               const semantic = classifiedByRequestId.get(request.id)
               const diff = diffByRequestId.get(request.id)
               const isSelected = selectedRequestId === request.id
-              const toolNames = semantic?.toolCalls.map((tool) => tool.name) ?? []
+              const toolNames = Array.from(new Set(semantic?.toolCalls.map((tool) => tool.name) ?? []))
               const stopReason = request.reconstructedMessage?.stopReason ?? '-'
               const model = request.body?.model ?? '-'
 
